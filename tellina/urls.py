@@ -29,5 +29,6 @@ urlpatterns = [
 
     url(r'^task/', views.task),
 
-    url(r'^mockups/translate.html', views.mockup_translate)
+    url(r'^mockups/translate.html', views.mockup_translate),
+    url(r'^mockups/explain.html', views.mockup_explain)
 ]

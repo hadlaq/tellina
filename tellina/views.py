@@ -8,6 +8,13 @@ from django.views.decorators.csrf import csrf_protect
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "commandline-helper"))
 from tellina.models import NLRequest, Translation
+import bashlex
+from explainshell import store, config, errors, explain
+
+import logging
+
+logger = logging.getLogger('project.interesting.stuff')
+
 
 DEBUG = False
 
@@ -20,6 +27,49 @@ def about(request):
 def mockup_translate(request):
     template = loader.get_template('mockups/translate.html')
     context = {}
+    return HttpResponse(template.render(context, request))
+
+def mockup_explain(request):
+    template = loader.get_template('mockups/explain.html')
+    if request.method == 'POST':
+        request_str = request.POST.get('request_str')
+    else:
+        request_str = request.GET.get('request_str')
+    context = {
+        'request_str': request_str
+    }
+
+    #############################################
+    command = request_str.strip()
+    command = command[:1000] # trim commands longer than 1000 characters
+    if '\n' in command:
+        print("error")
+
+    s = store.store('explainshell', config.MONGO_URI)
+    try:
+        matches, helptext = explain.explaincommand(command, s)
+        #matches, helptext = ("", "")
+        context = {
+            'request_str': request_str,
+            'matches': matches,
+            'helptext': helptext
+        }
+        return HttpResponse(template.render(context, request))
+
+
+    except errors.ProgramDoesNotExist:
+        print('missing man page')
+    except bashlex.errors.ParsingError:
+        print('parsing error')
+    except NotImplementedError:
+        msg = ("the parser doesn't support %r constructs in the command you tried. you may "
+               "<a href='https://github.com/idank/explainshell/issues'>report a "
+               "bug</a> to have this added, if one doesn't already exist.") % e.args[0]
+        print(msg)
+    # except Exception as ex:
+    #     msg = 'something went wrong... this was logged and will be checked'
+    #     print(ex)
+
     return HttpResponse(template.render(context, request))
 
 @csrf_protect
